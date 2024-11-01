@@ -1,0 +1,138 @@
+---
+title: "30DMC - Day 01 - Points"
+format: html
+editor: visual
+---
+
+## 30 Day Map Challenge 2024
+
+Instructions: <https://30daymapchallenge.com/>
+
+Day 01 is to make a map with **points**.
+
+## Install Packages
+
+This is the first time I am making full maps with R, so need to get the right packages. I'm using Claude.ai to develop maps. When I last tried mapping in R it was before AI was available to help with coding.
+
+A few notes:
+
+-   ggplot and dplyr are included in tidyverse
+
+-   sf is for the "Simple Features" standard in mapping, which I need to read more about
+
+-   rnaturalearth contains country data and features
+
+-   rnaturalearthdata is a separate package. I did not think I needed this but I got an error asking me if I wanted to install. Once installed, I was able to produce a map.
+
+-   ggrepel is help move map labels apart so they don't overlap.
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("sf")
+# install.packages("rnaturalearth")
+# install.packages("rnaturalearthdata")
+# install.packages("ggrepel")
+```
+
+## Libraries and Prep
+
+After today, this will be the starting point. I'll need to call the various packages that will be used, and possibly set working directory (or github–but need to read how to link these), and load in data that I'll use for future maps.
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggrepel)
+
+points <- read.csv("C:/Users/ClintonSears/OneDrive - Bixal Solutions Inc/8 - R/30DMC_2024/Day 01 Points Data.csv", header = TRUE)
+```
+
+::: {#tip-example .callout-tip}
+## Hiding Unnecessary Code
+
+The `echo: false` option disables the printing of code (only output is displayed).
+:::
+
+## Code from Claude
+
+```{r}
+# Get world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Create sample points data
+points_data <- data.frame(
+  name = c("New York", "London", "Tokyo", "Sydney", "Cape Town"),
+  lon = c(-74.006, -0.1276, 139.6503, 151.2093, 18.4241),
+  lat = c(40.7128, 51.5074, 35.6762, -33.8688, -33.9249)
+)
+
+# Convert points to sf object
+points_sf <- st_as_sf(points_data, 
+                      coords = c("lon", "lat"), 
+                      crs = 4326)
+
+# Create the map
+ggplot() +
+  # Add world map base layer
+  geom_sf(data = world, fill = "lightgray", color = "white") +
+  # Add points
+  geom_sf(data = points_sf, color = "red", size = 3) +
+  # Add labels
+  geom_sf_text(data = points_sf, aes(label = name), nudge_y = 3) +
+  # Customize the theme
+  theme_minimal() +
+  # Add title
+  labs(title = "World Cities") +
+  # Set reasonable map bounds
+  coord_sf(xlim = c(-180, 180), ylim = c(-60, 90))
+```
+
+## My Code for 30DMC Day 1
+
+Adapted from code above. This will be a map of places I've been in the past year from today, which include: Burlington, VT, Jay, VT, Medfield, MA, Rangeley, ME, Tokyo, Sapporo, Hirosaki, Nagano, Washington, DC, Amsterdam, Kampala, Brussels, Portland, OR, Montreal, Chicago, Jakarta, Corinth, VT.
+
+The map is too busy, though, so may need to limit this to just larger world cities. There's also a ggrepel package that is meant to do this in a more advanced way. I added ggrepel and it hides labels that cannot be easily separated, which is great!
+
+I shrunk the area of the map, from -60 south to -30. I also added in code to indent the map title a bit, and then made it bold and added in an italicized subtitle.
+
+This all took about 2 hours, which is a lot for the first day.
+
+```{r}
+# Get world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# First edit is to read in a csv of point data (added above to prep)
+# There are too many places to manually type
+# With my csv read in, the creation of a data frame is unnecessary
+
+# Convert points to sf object
+points_sf <- st_as_sf(points, 
+                      coords = c("longitude", "latitude"), 
+                      crs = 4326)
+
+# Create the map
+ggplot() +
+  # Add world map base layer
+  geom_sf(data = world, fill = "gray90", color = "white") +
+  # Add points
+  geom_sf(data = points_sf, color = "forestgreen", size = 2) +
+  # Add labels - but replace code above with ggrepel
+  #geom_sf_text(data = points_sf, aes(label = name), nudge_y = 10) +
+  
+  geom_sf_text(data = points_sf, aes(label = name), 
+               fun.geometry = st_centroid, 
+               nudge_x = 7, 
+               nudge_y = 7, 
+               check_overlap = TRUE) +
+  
+  # Customize the theme
+  theme_minimal() +
+  # remove the x and y from axes
+  labs(x = NULL, y = NULL, title = "Cities Visited in the Past Year", subtitle = "November 2023 through October 2024") +
+  # Move title in a bit so it's not at the far, far left
+  theme(plot.title = element_text(hjust = 0.1, face = "bold"), plot.subtitle = element_text(hjust = 0.1, face = "italic")) +
+  # Set reasonable map bounds
+  coord_sf(xlim = c(-180, 180), ylim = c(-30, 90))
+```
