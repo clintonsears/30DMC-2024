@@ -1,0 +1,253 @@
+---
+title: "30DMC - Day 03 - Polygons"
+format: html
+editor: visual
+---
+
+## 30 Day Map Challenge 2024
+
+Instructions: <https://30daymapchallenge.com/>
+
+Day 03 is to make a map with **polygons** so I'm going to make maps of VT. I've done the world map, US map (which was terrible) and now will look for a VT map.
+
+## Libraries and Prep
+
+For this map, I'm going to map the biophysical regions of Vermont, and then overlay the biological hotspots. Source data for these come from:
+
+-   <https://geodata.vermont.gov/datasets/VCGI::vt-biodiversity-project-biological-hotspots/about>
+
+-   <https://geodata.vermont.gov/datasets/VTANR::vermont-biophysical-regions/about>
+
+-   Do I need an outline of VT?
+
+I wanted to create side by side choropleth maps to show time series data (2019 vs 2024 emerald ash borer sightings, for example) but I couldn't find the time series data, let alone by county or town. I'm sure it's out there, but I'm not a GIS specialist and this is not my full time job :)
+
+::: callout-important
+## This is the first map where I'm actually using shapefiles I downloaded. I also needed to install the ggspatial package based on Claude code. Also, the viridis package, which helps create color scales for color blind accessibility. Finally, used ggnewscale to make some Claude code work that (unsurprisingly) makes a new color scale for the legend.
+:::
+
+```{r}
+#| message: false
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggrepel)
+library(maps)
+library(mapproj)
+library(patchwork)
+library(ggspatial)
+library(viridis)
+library(ggnewscale)
+
+vt_outline <- st_read("C:/Users/ClintonSears/OneDrive - Bixal Solutions Inc/8 - R/30DMC_2024/Day 03 VT_State_Outline/FS_VCGI_OPENDATA_Boundary_BNDHASH_poly_vtbnd_SP_v1.shp")
+
+biophysical <- st_read("C:/Users/ClintonSears/OneDrive - Bixal Solutions Inc/8 - R/30DMC_2024/Day 03 VT_Biophysical_Regions/Vermont_Biophysical_Regions.shp")
+
+hotspots <- st_read("C:/Users/ClintonSears/OneDrive - Bixal Solutions Inc/8 - R/30DMC_2024/Day 03 VT_Biological_Hotspots/VT_Biodiversity_Project_-_Biological_Hotspots.shp")
+```
+
+::: {#tip-example .callout-tip}
+## Hiding Unnecessary Code
+
+The `echo: false` option disables the printing of code (only output is displayed). And message: false will suppress all (code and output)
+:::
+
+## Code from Claude
+
+This was my prompt:
+
+Can you help me generate some R code that will create a map of the USA. I want the map to outline states I have lived in in blue, which includes Vermont, New Hampshire, and Maine. And I want the map to outline states I have visited in green, which includes Florida, Illinois, and Michigan.
+
+I had to fix depreciated code (use linewidth in place of size) and install additional packages, but it worked very well. Except I wanted just outline, not filled.
+
+```{r}
+# Create the map
+ggplot() +
+  # Base layer: Biophysical regions
+  geom_sf(data = biophysical, 
+          fill = "lightgreen", 
+          color = "black") +
+  
+  # Add hotspots layer
+  geom_sf(data = hotspots, 
+          fill = "goldenrod", 
+          alpha = 0.7) +
+  
+  # Add labels for biophysical regions
+  geom_sf_text(data = biophysical,
+               aes(label = NAME),  # Replace with your actual column name
+               size = 3,
+               check_overlap = TRUE) +
+  
+  # Add state outline
+  geom_sf(data = vt_outline,
+          fill = NA,
+          color = "black",
+          size = 1) +
+  
+  # Add scale bar and north arrow
+  annotation_scale(location = "br") +
+  annotation_north_arrow(location = "tr",
+                        style = north_arrow_fancy_orienteering) +
+  
+  # Customize theme
+  theme_minimal() +
+  theme(
+    legend.position = "left",
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.title = element_text(size = 10)
+  ) +
+  
+  # Add title
+  labs(title = "Vermont Biophysical Regions and Biological Hotspots",
+       fill = "Features") +
+  
+  # Add legend
+  scale_fill_manual(
+    values = c("Biophysical Regions" = "lightgreen",
+               "Biological Hotspots" = "goldenrod"),
+    name = "Features",
+    guide = guide_legend(title.position = "top")
+  )
+
+# Save the map if needed
+# ggsave("vermont_map.png", width = 10, height = 12, units = "in", dpi = 300)
+```
+
+::: callout-caution
+## No notes, but the map above needs additional work. Better labeled biophysical regions, no arrow, etc.
+:::
+
+## Modified Code from Claude
+
+Prompt: Great! Thank you for that. Now please change the code so that the biophysical layer uses various colors for each polygon, and remove the north arrow. Also be sure that the legend shows the names of each biophysical region.
+
+```{r}
+# Create the map
+ggplot() +
+  # Base layer: Biophysical regions with distinct colors
+  geom_sf(data = biophysical, 
+          aes(fill = NAME),  # Replace with your actual column name
+          color = "black") +
+  
+  # Add hotspots layer
+  geom_sf(data = hotspots, 
+          fill = "goldenrod", 
+          alpha = 0.7) +
+  
+  # Add labels for biophysical regions
+  geom_sf_text(data = biophysical,
+               aes(label = NAME),  # Replace with your actual column name
+               size = 3,
+               check_overlap = TRUE) +
+  
+  # Add state outline
+  geom_sf(data = vt_outline,
+          fill = NA,
+          color = "black",
+          size = 1) +
+  
+  # Add scale bar
+  annotation_scale(location = "br") +
+  
+  # Customize theme
+  theme_minimal() +
+  theme(
+    legend.position = "left",
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.title = element_text(size = 10)
+  ) +
+  
+  # Add title
+  labs(title = "Vermont Biophysical Regions and Biological Hotspots",
+       fill = "Biophysical Regions") +
+  
+  # Set colors for biophysical regions and add hotspots to legend
+  scale_fill_viridis(
+    discrete = TRUE,
+    option = "turbo"  # This gives a nice range of distinct colors
+  ) +
+  # Add second legend for hotspots
+  new_scale_fill() +
+  geom_sf(data = hotspots,
+          aes(fill = "Biological Hotspots"),
+          alpha = 0.7) +
+  scale_fill_manual(
+    values = c("Biological Hotspots" = "goldenrod"),
+    name = NULL
+  )
+
+# Save the map if needed
+# ggsave("vermont_map.png", width = 10, height = 12, units = "in", dpi = 300)
+```
+
+## 
+
+## My Final Code for Day 03
+
+Changes include:
+
+-   Center title
+
+```{r}
+# Create the map
+ggplot() +
+  # Base layer: Biophysical regions with distinct colors
+  geom_sf(data = biophysical, 
+          aes(fill = NAME),  # Replace with your actual column name
+          color = "black") +
+  
+  # Add hotspots layer
+  geom_sf(data = hotspots, 
+          fill = "goldenrod", 
+          alpha = 0.7) +
+  
+    # Add state outline
+  geom_sf(data = vt_outline,
+          fill = NA,
+          color = "black",
+          size = 3) +
+  
+  # Add scale bar
+  annotation_scale(location = "br", height = unit(.5, "cm")) +
+  
+  # Customize theme
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(hjust = 0, size = 24, face = "bold"),
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 18),
+    plot.subtitle = element_text(size = 12, face = "italic"),
+    panel.grid = element_blank(),
+    axis.text = element_blank(),
+  ) +
+  
+  # Add title
+  labs(x = NULL,
+       y = NULL, 
+       title = "Biological Hotspots within Vermont's Biophysical Regions",
+       subtitle = "Hotspots note locations of \"rare, threatened, and endangered plants, animals, and exemplary natural communities\"",
+       fill = "Biophysical Regions",
+       caption = "Data accessed from Vermont Open Geodata Portal (https://geodata.vermont.gov/), 3 Nov 2024") +
+  
+  # Set colors for biophysical regions and add hotspots to legend
+  scale_fill_viridis(
+    discrete = TRUE,
+    option = "turbo",  # This gives a nice range of distinct colors
+    alpha = 0.5
+  ) +
+  # Add second legend for hotspots
+  new_scale_fill() +
+  geom_sf(data = hotspots,
+          aes(fill = "Biological Hotspots"),
+          alpha = 0.9) +
+  scale_fill_manual(
+    values = c("Biological Hotspots" = "gray10"),
+    name = NULL
+  )
+
+# Save the map if needed
+# ggsave("vermont_map.png", width = 10, height = 12, units = "in", dpi = 300)
+```

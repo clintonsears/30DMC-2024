@@ -1,0 +1,226 @@
+---
+title: "30DMC - Day 02 - Lines"
+format: html
+editor: visual
+---
+
+## 30 Day Map Challenge 2024
+
+Instructions: <https://30daymapchallenge.com/>
+
+Day 02 is to make a map with **lines** which means roads, rivers, borders.
+
+## Libraries and Prep
+
+I'm building off of the same code I used for Day 01, and I've already got many packages installed.
+
+For this map, I'm going to outline the US states that I have lived in, and maybe will outline in a second color those that I have visited.
+
+::: callout-important
+## I need to install a new package (maps) that will get US map data, as well as package (mapproj) for coordinates. Also, package (patchwork) for adding in Alaska and Hawaii.
+:::
+
+```{r}
+#| message: false
+library(tidyverse)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggrepel)
+library(maps)
+library(mapproj)
+library(patchwork)
+
+#points <- read.csv("C:/Users/ClintonSears/OneDrive - Bixal Solutions Inc/8 - R/30DMC_2024/Day 1 Points Data.csv", header = TRUE)
+```
+
+::: {#tip-example .callout-tip}
+## Hiding Unnecessary Code
+
+The `echo: false` option disables the printing of code (only output is displayed). And message: false will suppress all (code and output)
+:::
+
+## Code from Claude
+
+This was my prompt:
+
+Hello! Can you please help me generate R code to make a map of Vermont? I need to start with the outline of Vermont. Then I have two shapefiles I want to add to the map. The first shapefile shows the biophysical regions of Vermont. These need to be labeled with their names, and should all be colored light green. The second shapefile should go on top of the first and shows biological hotspots. These do not need labels and should be colored goldenrod. I'll need a legend on the left side of the map. Thanks!
+
+```{r}
+# Get US states map data
+states_map <- map_data("state")
+
+# Create vectors of states lived in and visited
+lived_states <- c("vermont", "new hampshire", "maine")
+visited_states <- c("florida", "illinois", "michigan")
+
+# Create a data frame with state categories
+state_categories <- data.frame(
+  region = tolower(state.name),
+  category = case_when(
+    tolower(state.name) %in% lived_states ~ "Lived",
+    tolower(state.name) %in% visited_states ~ "Visited",
+    TRUE ~ "Other"
+  )
+)
+
+# Merge the categories with the map data
+states_map <- merge(states_map, state_categories, by = "region", all.x = TRUE)
+
+# Create the map
+ggplot(data = states_map, aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = category), color = "black", linewidth = 0.2) +
+  scale_fill_manual(
+    values = c("Lived" = "lightblue", "Visited" = "lightgreen", "Other" = "white"),
+    name = "State Status"
+  ) +
+  coord_map("albers", lat0 = 39, lat1 = 45) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  ggtitle("US States - Personal Travel History") +
+  labs(caption = "Blue: States lived in | Green: States visited")
+```
+
+::: callout-caution
+## What happened to AL, CA, CT, MS, etc.? There are weird polygons
+:::
+
+## My Code for 30DMC Day 02
+
+Adapted from code above.
+
+.
+
+```{r}
+# Get US states map data
+states_map <- map_data("state")
+
+# Create vectors of states lived in and visited
+lived_states <- c("vermont", "new hampshire", "maine", "louisiana", "massachusetts", "georgia")
+visited_states <- c("florida", "illinois", "michigan", "connecticut", "new york", "new jersey", "virginia", "north carolina", "indiana", "ohio", "pennsylvania", "california", "oregon", "washington", "wyoming", "colorado", "alabama", "mississippi", "maryland", "west virginia", "wisconsin", "tennessee")
+
+# Create the categories for states
+states_map$category <- case_when(
+  states_map$region %in% lived_states ~ "Lived",
+  states_map$region %in% visited_states ~ "Visited",
+  TRUE ~ "Not Visited"
+)
+
+# Convert to factor with specific levels - order matters for drawing
+states_map$category <- factor(states_map$category, 
+                            levels = c("Not Visited", "Visited", "Lived"))
+
+# Create the main map with layered drawing
+main_map <- ggplot() +
+  # Draw "Not Visited" states first
+  geom_polygon(
+    data = subset(states_map, category == "Not Visited"),
+    aes(x = long, y = lat, group = group),
+    fill = "white",
+    color = "gray70",
+    size = 1
+  ) +
+  # Draw "Visited" states second
+  geom_polygon(
+    data = subset(states_map, category == "Visited"),
+    aes(x = long, y = lat, group = group),
+    fill = "white",
+    color = "gold",
+    size = 1
+  ) +
+  # Draw "Lived" states last so they're on top
+  geom_polygon(
+    data = subset(states_map, category == "Lived"),
+    aes(x = long, y = lat, group = group),
+    fill = "white",
+    color = "royalblue",
+    size = 1
+  ) +
+  scale_color_manual(values = c("gray70", "gold", "royalblue"), 
+                     labels = c("Not Visited", "Visited", "Lived")
+                                                                                     ) +
+  coord_map("albers", lat0 = 39, lat1 = 45) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "bottom"
+  ) +
+  ggtitle("US States - Lived, Visited, and Not Visited") +
+  guides(color = guide_legend(title = "State Status"))
+  
+main_map
+```
+
+## 
+
+## Suggested Improvement from Google Gemini
+
+This works, but I am still missing two states + DC. Oh well.
+
+```{r}
+# Get US states map data
+states_map <- map_data("state")
+
+# Create vectors of states lived in and visited
+lived_states <- c("vermont", "new hampshire", "maine", "louisiana", "massachusetts", "georgia")
+visited_states <- c("florida", "illinois", "michigan", "connecticut", "new york", "new jersey", "virginia", "north carolina", "indiana", "ohio", "pennsylvania", "california", "oregon", "washington", "wyoming", "colorado", "alabama", "mississippi", "maryland", "west virginia", "wisconsin", "tennessee", "delaware")
+
+# Create the categories for states
+states_map$category <- case_when(
+  states_map$region %in% lived_states ~ "Lived",
+  states_map$region %in% visited_states ~ "Visited",
+  TRUE ~ "Not Visited"
+)
+
+# Convert to factor with specific levels - order matters for drawing
+states_map$category <- factor(states_map$category, 
+                            levels = c("Not Visited", "Visited", "Lived"))
+
+main_map <- ggplot() +
+  geom_polygon(
+    data = subset(states_map, category == "Not Visited"),
+    aes(x = long, y = lat, group = group, color = "Not Visited"),
+    fill = "white",
+    size = 1
+  ) +
+  geom_polygon(
+    data = subset(states_map, category == "Visited"),
+    aes(x = long, y = lat, group = group, color = "Visited"),
+    fill = "white",
+    size = 1
+  ) +
+  geom_polygon(
+    data = subset(states_map, category == "Lived"),
+    aes(x = long, y = lat, group = group, color = "Lived"),
+    fill = "white",
+    size = 1
+  ) +
+  scale_color_manual(values = c("royalblue", "gray70", "gold"),
+                     labels = c("Lived", "Not Visited", "Visited"),
+                     guide = guide_legend(title = "Legend")) +
+  coord_map("albers", lat0 = 39, lat1 = 45) +
+  theme_minimal() +
+  theme(
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5, face = "italic", color = "gray50"),
+    legend.position = "bottom"
+  ) +
+  ggtitle("US States - Lived, Visited, and Not Visited")+
+  labs(subtitle = "Where are Alaska, DC, and Hawaii??")
+
+main_map
+```
